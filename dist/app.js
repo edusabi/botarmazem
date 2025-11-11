@@ -1,4 +1,4 @@
-import makeWASocket, { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, makeCacheableSignalRepository, jidNormalizedUser, } from "@whiskeysockets/baileys";
+import makeWASocket, { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, jidNormalizedUser, } from "@whiskeysockets/baileys";
 import qrcode from "qrcode-terminal";
 // Tempo para encerrar atendimento por inatividade (minutos)
 const INACTIVITY_MINUTES = 5;
@@ -25,6 +25,31 @@ function getMenuText() {
 *5* - Falar com um Atendente
 `;
 }
+// --- FUNÇÃO DE EXTRAÇÃO DE TEXTO ---
+/**
+ * Função utilitária para extrair o texto de vários tipos de mensagens
+ */
+function getMessageText(message) {
+    if (message.message?.conversation) {
+        return message.message.conversation;
+    }
+    if (message.message?.extendedTextMessage?.text) {
+        return message.message.extendedTextMessage.text;
+    }
+    if (message.message?.buttonsResponseMessage?.selectedDisplayText) {
+        return message.message.buttonsResponseMessage.selectedDisplayText;
+    }
+    if (message.message?.listResponseMessage?.title) {
+        // Se for uma resposta de lista
+        return message.message.listResponseMessage.title;
+    }
+    if (message.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
+        // Se for uma seleção de linha em uma lista
+        return message.message.listResponseMessage.singleSelectReply.selectedRowId;
+    }
+    // Adicione outras verificações (e.g., listMessage, imageWithCaption) conforme necessário
+    return "";
+}
 async function startBot() {
     // O 'auth_info' guarda a sessão de login. Mantenha esta pasta na raiz.
     const { state, saveCreds } = await useMultiFileAuthState("auth_info");
@@ -33,12 +58,8 @@ async function startBot() {
         version,
         auth: state,
         syncFullHistory: false,
-        // Adiciona o cacheable repository, essencial para reduzir I/O do disco (que é lento em hospedagens)
-        // Embora não resolva 100% o problema de persistência da sessão.
-        is(repo) {
-            return makeCacheableSignalRepository(repo, undefined);
-        },
-        // Define o ID do cliente como o jid normalizado
+        // A propriedade incorreta 'is' foi removida.
+        // O caching de sessão agora é padrão ou deve ser implementado de forma mais complexa.
         generateHighQualityLinkPreview: true,
     });
     // Salva as credenciais do login sempre que houver uma atualização
@@ -52,7 +73,7 @@ async function startBot() {
             qrcode.generate(qr, { small: true });
         }
         if (connection === "close") {
-            // Verifica se o bot deve tentar reconectar
+            // Usamos 'Boom' para tipagem correta do erro de desconexão
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             console.log(`⚠️ Conexão fechada (${statusCode}). Reconectar? ${shouldReconnect}`);
@@ -67,13 +88,14 @@ async function startBot() {
             }
         }
         else if (connection === "open") {
-            console.log(`✅ Bot conectado com sucesso! JID: ${jidNormalizedUser(sock.user?.id || '')}`);
+            console.log(`✅ Bot conectado com sucesso! JID: ${jidNormalizedUser(sock.user?.id || "")}`);
         }
     });
     // Manipulador de mensagens
     sock.ev.on("messages.upsert", async (msgUpdate) => {
         try {
             const message = msgUpdate.messages?.[0];
+            // Garante que é uma mensagem, tem conteúdo e não é enviada pelo próprio bot
             if (!message || !message.message || message.key.fromMe)
                 return;
             const from = message.key.remoteJid;
@@ -104,6 +126,7 @@ async function startBot() {
                 }
                 else {
                     console.log(`🤝 ${from} está em atendimento — bot silenciado.`);
+                    // Você pode querer encaminhar esta mensagem para um atendente real aqui.
                 }
                 return; // Sai do processamento para não responder
             }
@@ -187,22 +210,6 @@ ${getMenuText()}
             console.error("Erro ao processar mensagem:", err);
         }
     });
-}
-/**
- * Função utilitária para extrair o texto de vários tipos de mensagens
- */
-function getMessageText(message) {
-    if (message.message?.conversation) {
-        return message.message.conversation;
-    }
-    if (message.message?.extendedTextMessage?.text) {
-        return message.message.extendedTextMessage.text;
-    }
-    if (message.message?.buttonsResponseMessage?.selectedDisplayText) {
-        return message.message.buttonsResponseMessage.selectedDisplayText;
-    }
-    // Adicione outras verificações (e.g., listMessage, imageWithCaption) conforme necessário
-    return "";
 }
 // Inicia o bot com tratamento de erro
 startBot().catch((e) => console.error("Erro fatal ao iniciar bot:", e));
