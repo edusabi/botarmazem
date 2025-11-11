@@ -4,11 +4,11 @@
   "type": "module",
   "main": "dist/app.js",
   "scripts": {
-    "preinstall": "git --version || echo 'git not installed, continuing...'",
-    "build": "tsc",
-    "start": "npm run build && node dist/app.js",
-    "dev": "ts-node src/app.ts"
-  },
+  "preinstall": "echo 'Git não encontrado, continuando...' || true",
+  "build": "tsc",
+  "start": "npm run build && node dist/app.js",
+  "dev": "ts-node src/app.ts"
+},
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^6.7.21",
