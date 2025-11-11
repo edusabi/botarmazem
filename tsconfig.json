@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    // Essencial para o Baileys e o tipo "module" no package.json
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    
+    // Garante que as definições de biblioteca modernas sejam incluídas.
+    "lib": ["ES2022"],
+    
+    // Onde o seu código TypeScript está
+    "rootDir": "src",
+    
+    // Onde o código JavaScript compilado será salvo (necessário para o start script)
+    "outDir": "./dist",
+    
+    // Configurações padrão e de qualidade
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
